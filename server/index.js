@@ -16,18 +16,15 @@ app.use(cookieParser());
 
 // Ajout des headers CORS manuellement
 app.use((req, res, next) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    "http://51.21.115.3:4000" // Utilisation directe de l'IP avec le port
-  );
+  res.header("Access-Control-Allow-Origin", "*"); // Accepte toutes les origines
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Cookie"
   );
-  res.header("Access-Control-Allow-Credentials", "true");
+  // On retire temporairement Allow-Credentials car il n'est pas compatible avec Allow-Origin: *
+  // res.header("Access-Control-Allow-Credentials", "true");
 
-  // Gestion de la requête OPTIONS (pre-flight)
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
