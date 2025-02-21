@@ -46,19 +46,25 @@ jobs:
           echo "${{ secrets.SSH_KEY_VPS }}" | tr -d '\r' > ~/.ssh/key
           chmod 600 ~/.ssh/key
           ssh-add ~/.ssh/key
-          ssh-add -l  # Vérification
+          ssh-add -l
 
-          # Important : ajouter le keyscan AVANT les connexions
           ssh-keyscan -H -p ${{ env.SERVER_PORT }} ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts
 
           # Test de connexion basique
           echo "Test de connexion SSH basique..."
           ssh -v -i ~/.ssh/key -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "echo 'Connexion réussie'"
 
-          # Vérification de Node et npm
+          # Vérification de Node.js avec plus de détails
           echo "Vérification de Node.js..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "which node && node -v"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "which node || echo 'Node not found'; node -v || echo 'Cannot get Node version'"
 
+          echo "Vérification du PATH..."
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "echo \$PATH"
+
+          # Si Node n'est pas trouvé, vérifions s'il est installé globalement
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "ls -la /usr/bin/node || ls -la /usr/local/bin/node"
+
+          # Vérification de npm
           echo "Vérification de npm..."
           ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "which npm && npm -v"
 
