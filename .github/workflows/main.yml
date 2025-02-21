@@ -54,19 +54,15 @@ jobs:
           echo "Test de connexion SSH basique..."
           ssh -v -i ~/.ssh/key -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "echo 'Connexion réussie'"
 
-          # Vérification de Node.js avec plus de détails
+          # Vérification avec source du profil
           echo "Vérification de Node.js..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "which node || echo 'Node not found'; node -v || echo 'Cannot get Node version'"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.profile && node -v"
 
-          echo "Vérification du PATH..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "echo \$PATH"
-
-          # Si Node n'est pas trouvé, vérifions s'il est installé globalement
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "ls -la /usr/bin/node || ls -la /usr/local/bin/node"
-
-          # Vérification de npm
           echo "Vérification de npm..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "which npm && npm -v"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.profile && npm -v"
+
+          # Suite des commandes avec source
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.profile && cd /home/ubuntu/server && sudo npm install"
 
           # Préparation du répertoire
           echo "Préparation du répertoire..."
@@ -76,13 +72,9 @@ jobs:
           echo "Copie des fichiers..."
           scp -v -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
 
-          # Installation des dépendances
-          echo "Installation des dépendances..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && ls -la && sudo chown -R ubuntu:ubuntu . && sudo npm install"
-
           # Démarrage de l'application
           echo "Démarrage de l'application..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && sudo pm2 startOrRestart ecosystem.config.js --env production && sudo pm2 save"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.profile && cd /home/ubuntu/server && sudo pm2 startOrRestart ecosystem.config.js --env production && sudo pm2 save"
 
         #      run: |
         # eval "$(ssh-agent -s)"
