@@ -42,12 +42,12 @@ jobs:
       - name: Deploy
         run: |
           eval "$(ssh-agent -s)"
-          # Afficher le contenu de la clé (masqué dans les logs)
+          mkdir -p ~/.ssh
           echo "${{ secrets.SSH_KEY_VPS }}" | tr -d '\r' > ~/.ssh/key
           chmod 600 ~/.ssh/key
           ssh-add ~/.ssh/key
           ssh-add -l  # Vérification
-          mkdir -p ~/.ssh
+
           # Important : ajouter le keyscan AVANT les connexions
           ssh-keyscan -H -p ${{ env.SERVER_PORT }} ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts
 
