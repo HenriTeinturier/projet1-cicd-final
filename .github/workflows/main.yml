@@ -1,7 +1,7 @@
 name: CI/CD workflow
 
 env:
-  SERVER_IP: "172.31.23.90"
+  SERVER_IP: "ec2-51-21-115-3.eu-north-1.compute.amazonaws.com"
   SERVER_USER: "ubuntu"
   SERVER_PORT: "2222"
 
@@ -12,7 +12,7 @@ on:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latestZ
     defaults:
       run:
         working-directory: ./server
@@ -47,5 +47,4 @@ jobs:
           ssh-keyscan -H -p ${{ env.SERVER_PORT }} ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts
           scp -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
           ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm install"
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 delete server || true"
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 start ecosystem.config.js --env production && pm2 save"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
