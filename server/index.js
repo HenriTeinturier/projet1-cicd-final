@@ -18,7 +18,7 @@ app.use(cookieParser());
 app.use((req, res, next) => {
   res.header(
     "Access-Control-Allow-Origin",
-    "http://ec2-51-21-115-3.eu-north-1.compute.amazonaws.com" // Sans le port
+    "http://51.21.115.3:4000" // Utilisation directe de l'IP avec le port
   );
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header(
