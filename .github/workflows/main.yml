@@ -42,14 +42,18 @@ jobs:
       - name: Deploy
         run: |
           eval "$(ssh-agent -s)"
-          ssh-add -l  # Vérifie si la clé est bien ajoutée
-          ssh-add - <<< "${{ secrets.SSH_KEY_VPS }}"
-          ssh-add -l  # Vérifie à nouveau après l'ajout
+          # Afficher le contenu de la clé (masqué dans les logs)
+          echo "${{ secrets.SSH_KEY_VPS }}" | tr -d '\r' > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          ssh-add ~/.ssh/key
+          ssh-add -l  # Vérification
           mkdir -p ~/.ssh
+          # Important : ajouter le keyscan AVANT les connexions
+          ssh-keyscan -H -p ${{ env.SERVER_PORT }} ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts
 
           # Test de connexion basique
           echo "Test de connexion SSH basique..."
-          ssh -v -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "echo 'Connexion réussie'"
+          ssh -v -i ~/.ssh/key -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "echo 'Connexion réussie'"
 
           # Vérification de Node et npm
           echo "Vérification de Node.js..."
