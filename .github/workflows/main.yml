@@ -54,15 +54,12 @@ jobs:
           echo "Test de connexion SSH basique..."
           ssh -v -i ~/.ssh/key -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "echo 'Connexion réussie'"
 
-          # Vérification avec source du profil
+          # Vérification avec chemin complet
           echo "Vérification de Node.js..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.profile && node -v"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "/usr/bin/node -v"
 
           echo "Vérification de npm..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.profile && npm -v"
-
-          # Suite des commandes avec source
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.profile && cd /home/ubuntu/server && sudo npm install"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "/usr/bin/npm -v"
 
           # Préparation du répertoire
           echo "Préparation du répertoire..."
@@ -72,9 +69,13 @@ jobs:
           echo "Copie des fichiers..."
           scp -v -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
 
-          # Démarrage de l'application
+          # Installation avec chemin complet
+          echo "Installation des dépendances..."
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && sudo /usr/bin/npm install"
+
+          # Démarrage avec chemin complet
           echo "Démarrage de l'application..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.profile && cd /home/ubuntu/server && sudo pm2 startOrRestart ecosystem.config.js --env production && sudo pm2 save"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && sudo /usr/local/bin/pm2 startOrRestart ecosystem.config.js --env production && sudo /usr/local/bin/pm2 save"
 
         #      run: |
         # eval "$(ssh-agent -s)"
