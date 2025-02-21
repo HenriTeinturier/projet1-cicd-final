@@ -12,7 +12,7 @@ on:
 
 jobs:
   tests:
-    runs-on: ubuntu-latestZ
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./server
