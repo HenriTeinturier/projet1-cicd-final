@@ -1,67 +1,132 @@
 name: CI/CD workflow
 
+#! on va ajouter des variables d'environnement ici.
+# Bien sûr on pourrait aussi mettre ces variables dans les secrets du repo.
+
 env:
   SERVER_IP: "ec2-51-21-115-3.eu-north-1.compute.amazonaws.com"
   SERVER_USER: "ubuntu"
   SERVER_PORT: "2222"
 
+  # On va lancer le workflow lorsqu'un push est fait sur la branche main
 on:
   push:
     branches:
       - main
 
+# pour les jobs on va en faire un ou on va regrouper nos tests et un autre pour le deploiement:
+
 jobs:
+  # pour le job test on va mettre dedans:
+  # verifier le code avec le script lint
+  # Vérifier les vulnérabilités de nos dépendences avec la commande npm audit
+  # Lancer les tests avec le script test:ci
   tests:
     runs-on: ubuntu-latest
+    # on précise le répertoire de travail pour ne pas le spécifier à chaque fois
     defaults:
       run:
         working-directory: ./server
     steps:
+      # on récupère notre repo
       - name: Checkout code
         uses: actions/checkout@v4
+        # on installe node
       - name: Install node
         uses: actions/setup-node@v4
+        # il y a une option pratique avec l'action setup-node:
+        # On peut mettre en cache les dépendances pour gagner du temps
+        # on précise que c'est pour npm
+        # et on précise package-lock.json pour que le cache soit dépendant de ce fichier
+        # on précise le chemin vers serveur car le workging directory par defautl n'est pas pris en compte dans le cache
         with:
           cache: "npm"
           cache-dependency-path: "./server/package-lock.json"
+      # on installe les dépendances
       - name: Install dependencies
         run: npm ci
+      # On vérifie le code avec le script lint
       - name: Verify code
         run: npm run lint
+      # On vérifie les vulnérabilités de nos dépendences avec la commande audit
+      # --production pour ne pas auditer les dépendances de développement
+      # --audit-level=critical pour ne bloquer le build que pour les vulnérabilités critiques
       - name: Verify vulnerabilities
         run: npm audit --production --audit-level=critical
+      # On lance les tests
       - name: Run tests
         run: npm run test:ci
 
+  # pour le job deploy on va devoir:
+  # Se connecter sur le vps avec notre clé ssh
+  #  Récupérer le code source
+  #  Installer les dépendances
+  #  Lancer notre serveur avec pm2
+  # On complexifiera le deploy quand il y aura l'application frontend
   deploy:
+    # on veut que le deploy ne s'execute que si les tests sont passés
     needs: tests
     runs-on: ubuntu-latest
     steps:
+      # premiere chose on récupère le code source
       - name: Checkout code
         uses: actions/checkout@v4
+      # on va maintenant s'occuper du deploiement. On va faire plusieurs commandes dans la step
+      # pour commencer on va activer l'agent ssh sur notre runner. En effet, l'agent ssh est un outil qui permet de stocker en mémoire notre clé ssh et l'utiliser à chaque fois que l'on veut se connecter à un serveur distant.
+      # L'interêt est que l'on a pas besoin de stocker notre clé sur le disque dur du runner ni d'ajouter notre clé pour toutes les commandes ssh par la suite. L'agent ssh le fait automatiquement.
+      # De plus la clé sera supprimée de la mémoire dès que le runner sera arrêté.
+      # Pour lancer l'agent ssh, on va utiliser l'action ssh-agent puis on va ajouter notre clé ssh avec l'action ssh-add
       - name: Deploy
         run: |
+          # eval permet de lancer l'agent ssh et -s permet de lancer l'agent ssh en mode compatible avec bash. On regroupe ssh-agent et le flag -s dans une parenthèse pour que ce soit considéré comme une commande unique.
           eval "$(ssh-agent -s)"
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KEY_VPS }}" | tr -d '\r' > ~/.ssh/key
-          chmod 600 ~/.ssh/key
-          ssh-add ~/.ssh/key
-          ssh-add -l
 
+          # Malgré l'utilisation de ssh-agent on  va créer un répertoire .ssh pour stocker le fingerprint (empreinte digitale)
+          # du serveur. 
+          # Cette empreinte est unique et permet de vérifier l'identité du serveur à chaque connexion comme une carte d'identité. C'est ce que l'on vous demande de valider lors de la première connexion ssh en général.
+          # Cela sert à s'assurer que l'on se connecte bien à un serveur connu et non un serveur malveillant. Sinon on s'exploserait à une attaque man-in-the-middle ou on serait redirigé vers un autre serveur qui nous ferait croire que c'est le serveur original.
+          # on placera dans ce repertoire les options ssh et notamment  le fichier known_hosts ou l'on stockera le fingerprint du vps.
+          mkdir -p ~/.ssh
+
+          # On va récupérer via le contexte secrets avec la clé SSH_KEY_VPS que l'on a ajoutée dans le repo le fin
+          # ssh-add s'attends à recevoir un fichier ou une entrée standard. On va donc utiliser <<< pour envoyer la clé ssh en entrée standard et - permet de dire à ssh-add de lire de puis l'entrée standard
+          ssh-add - <<< "${{ secrets.SSH_KEY_VPS }}"
+          #! à supprimer? ets.SSH_KEY_VPS }}" | tr -d '\r' > ~/.ssh/key
+
+          #! a supprimer?
+          # chmod 600 ~/.ssh/key
+          # ssh-add ~/.ssh/key
+          # ssh-add -l
+
+          # On va maintenant enregistrer le fingerprint du serveur dans le fichier known_hosts
+          #! On peut aller voir sur notre machine en local et on verra que le fichier known_hosts est bien présent dans le répertoire .ssh
+          #! on peut même l'ouvrir avec nano et on verra que les différents serveurs connus sont bien enregistrés.
+          # ssh-keyscan permet de récupérer le fingerprint du serveur (en s'y connectant via son ip et port). 
+          # -H pour hacher ce que l'on récupère et on redirige la sortie dans le fichier known_hosts sur le runner.
           ssh-keyscan -H -p ${{ env.SERVER_PORT }} ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts
 
-          # Préparation du répertoire
+
+          #! a supprimer? répertoire
           echo "Préparation du répertoire..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "sudo mkdir -p /home/ubuntu/server && sudo chown ubuntu:ubuntu /home/ubuntu/server"
+          # ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "sudo mkdir -p /home/ubuntu/server && sudo chown ubuntu:ubuntu /home/ubuntu/server"
 
           # Copie des fichiers
           echo "Copie des fichiers..."
-          scp -v -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
+          # Maintenant pour cloner le repertoire vers notre vps et faire un git clone il faudrait ajouter une clé ssh entre le vps et github.
+          # Mais on va copier directement le repo récupéré sur le runner sur le vps avec la commande scp (sécure Copy Protocol).
+          # Cette commande permet de copier des fichiers et repertoires via la connexion ssh.
+          # Par contre c'est juste une copie et donc vu que l'on ne va pas copier la racine de notre repo qui contient le .git l'historique git ne sera pas conservé mais on en a pas besoin.
+          # scp -P <portSSH> -r (flag récursif) ./server (Source: tous les fichiers  du dossier server ) <user>@<ip>:<path> (Destination: chemin vers le repertoire de destination)
+          #! a supprimer?  scp -v -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
+          scp -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
 
           # Installation des dépendances
           echo "Installation des dépendances..."
+          #! a supprimer ? ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm install"
           ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm install"
 
           # Démarrage de l'application
           echo "Démarrage de l'application..."
+          # On va maintenant lancer ou relancer le serveur s'il est déjà déparré avec la commande pm2 startOrRestart et precisant le fichier de configuration du serveur. On lui précise l'environnement de production pour que PM2 utilise la clé env_production dans le fichier ecosystem.config.js puis on save la configuration de PM2.
+          #! a supprier? sh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
           ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
