@@ -58,10 +58,10 @@ jobs:
           echo "Copie des fichiers..."
           scp -v -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
 
-          # Installation des dépendances avec NVM
+          # Installation des dépendances
           echo "Installation des dépendances..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.nvm/nvm.sh && cd /home/ubuntu/server && npm install"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm install"
 
-          # Démarrage de l'application avec NVM
+          # Démarrage de l'application
           echo "Démarrage de l'application..."
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "source ~/.nvm/nvm.sh && cd /home/ubuntu/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
