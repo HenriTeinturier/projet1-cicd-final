@@ -60,7 +60,7 @@ jobs:
         run: npm ci
       # on lance les 3 commandes de la matrice
       - name: Lancer les tests
-        run: npm run ${{ matrix.npm_command }}
+        run: npm ${{ matrix.npm_command }}
 
   # pour le job deploy on va devoir:
   # Se connecter sur le vps avec notre clé ssh
