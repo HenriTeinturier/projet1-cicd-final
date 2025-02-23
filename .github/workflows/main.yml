@@ -30,6 +30,16 @@ jobs:
     defaults:
       run:
         working-directory: ./server
+    strategy: # Stratégie pour l'exécution du job
+      fail-fast: true # Arrête tous les jobs si l'un d'entre eux échoue
+      matrix: # Définit une matrice pour exécuter des jobs en parallèle
+        # Les différentes commandes npm à exécuter
+        npm_command:
+          [
+            "run test:ci",
+            "run lint",
+            "audit --production --audit-level=critical",
+          ]
     steps:
       # on récupère notre repo
       - name: Checkout code
@@ -48,17 +58,9 @@ jobs:
       # on installe les dépendances en mode clean install
       - name: Install dependencies
         run: npm ci
-      # On vérifie le code avec le script lint
-      - name: Verify code
-        run: npm run lint
-      # On vérifie les vulnérabilités de nos dépendences avec la commande audit
-      # --production pour ne pas auditer les dépendances de développement
-      # --audit-level=critical pour ne bloquer le build que pour les vulnérabilités critiques
-      - name: Verify vulnerabilities
-        run: npm audit --production --audit-level=critical
-      # On lance les tests
-      - name: Run tests
-        run: npm run test:ci
+      # on lance les 3 commandes de la matrice
+      - name: Lancer les tests
+        run: npm run ${{ matrix.npm_command }}
 
   # pour le job deploy on va devoir:
   # Se connecter sur le vps avec notre clé ssh
