@@ -2,20 +2,23 @@ name: CI/CD workflow
 
 #! on va ajouter des variables d'environnement ici.
 # Bien sûr on pourrait aussi mettre ces variables dans les secrets du repo.
-
 env:
   SERVER_IP: "ec2-51-21-115-3.eu-north-1.compute.amazonaws.com"
   SERVER_USER: "ubuntu"
   SERVER_PORT: "2222"
 
-  # On va lancer le workflow lorsqu'un push est fait sur la branche main
+# On va gérer la concurrence des jobs afin de ne lancer qu'un workflow à la fois et annuler le workflow en cours si un nouveau workflow "CI/CD workflow" est lancé
+concurrency:
+  group: ${{ github.workflow }} # Groupe de concurrence basé sur le nom du workflow
+  cancel-in-progress: true # Annule le workflow en cours si un nouveau workflow "CI/CD workflow" est lancé
+
+# On va lancer le workflow lorsqu'un push est fait sur la branche main
 on:
   push:
     branches:
       - main
 
 # pour les jobs on va en faire un ou on va regrouper nos tests et un autre pour le deploiement:
-
 jobs:
   # pour le job test on va mettre dedans:
   # verifier le code avec le script lint
