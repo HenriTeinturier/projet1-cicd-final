@@ -42,7 +42,7 @@ jobs:
         with:
           cache: "npm"
           cache-dependency-path: "./server/package-lock.json"
-      # on installe les dépendances
+      # on installe les dépendances en mode clean install
       - name: Install dependencies
         run: npm ci
       # On vérifie le code avec le script lint
@@ -120,7 +120,7 @@ jobs:
 
           # Installation des dépendances
           #! a supprimer ? ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm install"
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm install"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm ci --omit=dev"
 
           # Démarrage de l'application
           # On va maintenant lancer ou relancer le serveur s'il est déjà déparré avec la commande pm2 startOrRestart et precisant le fichier de configuration du serveur. On lui précise l'environnement de production pour que PM2 utilise la clé env_production dans le fichier ecosystem.config.js puis on save la configuration de PM2.
