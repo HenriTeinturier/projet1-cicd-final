@@ -125,4 +125,4 @@ jobs:
           # Démarrage de l'application
           # On va maintenant lancer ou relancer le serveur s'il est déjà déparré avec la commande pm2 startOrRestart et precisant le fichier de configuration du serveur. On lui précise l'environnement de production pour que PM2 utilise la clé env_production dans le fichier ecosystem.config.js puis on save la configuration de PM2.
           #! a supprier? sh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
-          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && sudo pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
+          ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && sudo pm2 startOrRestart ecosystem.config.js --env production && sudo pm2 save"
