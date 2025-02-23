@@ -24,7 +24,7 @@ jobs:
   # verifier le code avec le script lint
   # Vérifier les vulnérabilités de nos dépendences avec la commande npm audit
   # Lancer les tests avec le script test:ci
-  tests:
+  check-tests-backend:
     runs-on: ubuntu-latest
     # on précise le répertoire de travail pour ne pas le spécifier à chaque fois
     defaults:
@@ -66,6 +66,55 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  check-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      # Rappel: Le working-directory défini dans defaults fonctionne bien pour les commandes run, mais le cache de l'action setup-node nécessite toujours un chemin explicite vers le package-lock.json via cache-dependency-path.
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          cache: "npm"
+          # Cette fois on va chercher le cache du côté de client
+          cache-dependency-path: "./client/package-lock.json"
+      - name: Install dependencies
+        run: npm ci
+      - name: Vérifie le code
+        run: npm run lint
+      - name: Vérifier les vulnérabilités
+        run: npm audit --production --audit-level=critical
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    needs: check-frontend
+    defaults:
+      run:
+        working-directory: ./client
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          cache: "npm"
+          cache-dependency-path: "./client/package-lock.json"
+      - name: Install dependencies
+        run: npm ci
+      - name: Build application frontend
+        run: npm run build
+      - name: Upload build frontend
+        uses: actions/upload-artifact@v4
+        with:
+          # nom de l'artifact
+          name: build-frontend
+          # le workgin directory default n'a pas non plus été pris en comtpe dans cette action.
+          # dist car c'est le dossier de build de notre application frontend.
+          path: ./client/dist
+
   # pour le job deploy on va devoir:
   # Se connecter sur le vps avec notre clé ssh
   #  Récupérer le code source
@@ -74,12 +123,25 @@ jobs:
   # On complexifiera le deploy quand il y aura l'application frontend
   deploy:
     # on veut que le deploy ne s'execute que si les tests sont passés
-    needs: tests
+    needs: [check-tests-backend, build-frontend]
     runs-on: ubuntu-latest
     steps:
       # premiere chose on récupère le code source
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Download build frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: build-frontend
+          # on le place dans dist à la racine comme server.
+          # Si on regarde  server/index/js on peut voir que par rapport à server on revient en arrière ..
+          # et on retourne dans dist.
+          # app.get("*", (req, res) => {
+          # res.sendFile(path.join(__dirname, "../dist/index.html"));
+          # });
+          # a noter que nous pourrions le mettre ailleurs pour le moment car nous sommes dans notre runner.github-token:
+          # Il faudra bien le mettre à la racine au même niveau que server sur notre vps.
+          path: ./dist
       # on va maintenant s'occuper du deploiement. On va faire plusieurs commandes dans la step
       - name: Deploy
         run: |
@@ -115,6 +177,8 @@ jobs:
           # Par contre c'est juste une copie et donc vu que l'on ne va pas copier la racine de notre repo qui contient le .git l'historique git ne sera pas conservé mais on en a pas besoin.
           # scp -P <portSSH> -r (flag récursif) ./server (Source: tous les fichiers  du dossier server ) <user>@<ip>:<path> (Destination: chemin vers le repertoire de destination)
           scp -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
+          # on va copier le build frontend
+          scp -P ${{ env.SERVER_PORT }} -r ./dist ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
 
           # Installation des dépendances
           ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm ci --omit=dev"
