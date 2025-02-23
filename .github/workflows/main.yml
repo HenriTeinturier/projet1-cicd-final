@@ -61,6 +61,10 @@ jobs:
       # on lance les 3 commandes de la matrice
       - name: Lancer les tests
         run: npm ${{ matrix.npm_command }}
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   # pour le job deploy on va devoir:
   # Se connecter sur le vps avec notre clé ssh
