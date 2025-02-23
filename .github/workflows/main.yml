@@ -107,11 +107,9 @@ jobs:
 
 
           #! a supprimer? répertoire
-          echo "Préparation du répertoire..."
           # ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "sudo mkdir -p /home/ubuntu/server && sudo chown ubuntu:ubuntu /home/ubuntu/server"
 
           # Copie des fichiers
-          echo "Copie des fichiers..."
           # Maintenant pour cloner le repertoire vers notre vps et faire un git clone il faudrait ajouter une clé ssh entre le vps et github.
           # Mais on va copier directement le repo récupéré sur le runner sur le vps avec la commande scp (sécure Copy Protocol).
           # Cette commande permet de copier des fichiers et repertoires via la connexion ssh.
@@ -121,12 +119,10 @@ jobs:
           scp -P ${{ env.SERVER_PORT }} -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/home/ubuntu/
 
           # Installation des dépendances
-          echo "Installation des dépendances..."
           #! a supprimer ? ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm install"
           ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && npm install"
 
           # Démarrage de l'application
-          echo "Démarrage de l'application..."
           # On va maintenant lancer ou relancer le serveur s'il est déjà déparré avec la commande pm2 startOrRestart et precisant le fichier de configuration du serveur. On lui précise l'environnement de production pour que PM2 utilise la clé env_production dans le fichier ecosystem.config.js puis on save la configuration de PM2.
           #! a supprier? sh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
           ssh -p ${{ env.SERVER_PORT }} ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /home/ubuntu/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
