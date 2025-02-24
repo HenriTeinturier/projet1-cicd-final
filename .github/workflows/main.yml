@@ -112,7 +112,8 @@ jobs:
           build: npm run build
           start: npm run preview
           wait-on: "http://localhost:4173"
-          command: npm run test:e2e
+          command: cypress run --e2e --config-file cypress.config.mjs
+          # command: npm run test:e2e
 
   build-frontend:
     runs-on: ubuntu-latest
