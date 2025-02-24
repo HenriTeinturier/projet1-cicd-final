@@ -88,33 +88,6 @@ jobs:
       - name: Vérifier les vulnérabilités
         run: npm audit --production --audit-level=critical
 
-  # Nouveau job pour les tests E2E
-  e2e-tests:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./client
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          cache: "npm"
-          cache-dependency-path: "./client/package-lock.json"
-      - name: Install dependencies
-        run: npm ci
-      # Installation de Cypress
-      - name: Install Cypress
-        uses: cypress-io/github-action@v6
-        with:
-          working-directory: ./client
-          build: npm run build
-          start: npm run preview
-          wait-on: "http://localhost:4173"
-          command: cypress run --e2e --config-file cypress.config.mjs
-          # command: npm run test:e2e
-
   build-frontend:
     runs-on: ubuntu-latest
     needs: check-frontend
@@ -142,6 +115,58 @@ jobs:
           # dist car c'est le dossier de build de notre application frontend.
           path: ./client/dist
 
+  test-e2e-frontend:
+    # on a besoin de récupérer l'artefact donc on n'attends que build soit terminé
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    # on ne donne pas de working-directory car on va utiliser ./client et ./server
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          cache: "npm"
+          # le cache va dependre de package.json dans client et dans server
+          # on peut utiliser un tableau pour mettre les deux liens
+          # ou un pattern glob qui dans notre cas va récupérer dans tous les sous dossiers package-lock.json
+          cache-dependency-path: "**package-lock.json"
+          ## on install les dependences sur le serveur et cypress le fera pour nous pour le client
+      - name: Install dependencies
+        run: |
+          cd server
+          npm ci
+      # On récupère l'artifact et on le met dans client/dist
+      - name: Download build frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: build-frontend
+          path: ./client/dist
+      # on lance le backend
+      # on lance le backend avec l'option "et" "&" pour lancer le terminal en background
+      - name: Start backend
+        run: |
+          cd server
+          npm start &
+      # on utilise l'action cypress pour lancer les tests e2e
+      - name: Start e2e tests
+        uses: cypress-io/github-action@v6
+        # on doit préciser les options
+        with:
+          working-directory: client
+          browser: chrome
+          # on lance notre serveur en mode preview (necessite le build préalable)
+          # Rappel: preview lance un serveur en utilisant le dossier dist
+          start: npm run preview
+          # on précise d'attendre que le serveur réponde sur le port 4173
+          wait-on: http://localhost:4173
+          # on peut préciser une durée de timeout si on arrive pas à se connecter au serveur
+          wait-on-timeout: 60
+          # on précise la baseUrl: C'est notre serveur
+          # On pourrait faire le test après le deploiement sur le vps en précisant une url externe
+          config: baseUrl=http://localhost:4173
+          # On met ensuite notre deploy dependant de ce job à la place de build-frontend
+
   # pour le job deploy on va devoir:
   # Se connecter sur le vps avec notre clé ssh
   #  Récupérer le code source
@@ -150,7 +175,7 @@ jobs:
   # On complexifiera le deploy quand il y aura l'application frontend
   deploy:
     # on veut que le deploy ne s'execute que si les tests sont passés
-    needs: [check-tests-backend, build-frontend]
+    needs: [check-tests-backend, test-e2e-frontend]
     runs-on: ubuntu-latest
     steps:
       # premiere chose on récupère le code source
