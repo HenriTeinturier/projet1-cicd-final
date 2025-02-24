@@ -130,7 +130,7 @@ jobs:
           # le cache va dependre de package.json dans client et dans server
           # on peut utiliser un tableau pour mettre les deux liens
           # ou un pattern glob qui dans notre cas va récupérer dans tous les sous dossiers package-lock.json
-          cache-dependency-path: "**package-lock.json"
+          cache-dependency-path: "**/package-lock.json"
           ## on install les dependences sur le serveur et cypress le fera pour nous pour le client
       - name: Install dependencies
         run: |
