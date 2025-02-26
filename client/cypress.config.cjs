@@ -1,4 +1,4 @@
-// Configuration Cypress pour Docker (CommonJS)
+// Configuration Cypress avec CommonJS
 /* eslint-disable */
 
 const { defineConfig } = require('cypress');
